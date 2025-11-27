@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+becheng-todos.md
+.gitignore
+.codacy/codacy.yaml

@@ -3,6 +3,10 @@
 name: remote-mcp-apim-functions-python
 metadata:
   template: remote-mcp-apim-functions-python@1.0.0
+hooks:
+  postdeploy:
+    run: ./scripts/set-apim-named-values.sh
+    continueOnError: false
 services:
   api:
     project: ./src/

@@ -262,3 +262,5 @@ output AZURE_TENANT_ID string = tenant().tenantId
 output SERVICE_API_NAME string = api.outputs.SERVICE_API_NAME
 output AZURE_FUNCTION_NAME string = api.outputs.SERVICE_API_NAME
 output SERVICE_API_ENDPOINTS array = [ '${apimService.outputs.gatewayUrl}/mcp/sse' ]
+output AZURE_RESOURCE_GROUP string = rg.name
+output AZURE_APIM_NAME string = apimService.name

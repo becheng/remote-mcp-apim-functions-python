@@ -15,13 +15,24 @@ resource functionApp 'Microsoft.Web/sites@2023-12-01' existing = {
 }
 
 // Create a named value in APIM to store the function key
-resource functionHostKeyNamedValue 'Microsoft.ApiManagement/service/namedValues@2023-05-01-preview' = {
+// resource functionHostKeyNamedValue 'Microsoft.ApiManagement/service/namedValues@2023-05-01-preview' = {
+//   parent: apimService
+//   name: 'function-host-key'
+//   properties: {
+//     displayName: 'function-host-key'
+//     secret: true
+//     value: listKeys('${functionApp.id}/host/default', functionApp.apiVersion).masterKey
+//   }
+// }
+
+// Create a placeholder named value in APIM to store the function mcp_extension key
+resource functionMcpExtKeyNamedValue 'Microsoft.ApiManagement/service/namedValues@2023-05-01-preview' = {
   parent: apimService
-  name: 'function-host-key'
+  name: 'mcp-extension-key'
   properties: {
-    displayName: 'function-host-key'
+    displayName: 'mcp-extension-key'
     secret: true
-    value: listKeys('${functionApp.id}/host/default', functionApp.apiVersion).masterKey
+    value: '-'
   }
 }
 
@@ -33,14 +44,14 @@ resource mcpApi 'Microsoft.ApiManagement/service/apis@2023-05-01-preview' = {
     displayName: 'MCP API'
     description: 'Model Context Protocol API endpoints'
     subscriptionRequired: false
-    path: 'mcp'
+    path: 'mcpservice'
     protocols: [
       'https'
     ]
-    serviceUrl: 'https://${functionApp.properties.defaultHostName}/runtime/webhooks/mcp'
+    serviceUrl: 'https://${functionApp.properties.defaultHostName}/runtime/webhooks'
   }
   dependsOn: [
-    functionHostKeyNamedValue
+    functionMcpExtKeyNamedValue
   ]
 }
 
@@ -55,38 +66,50 @@ resource mcpApiPolicy 'Microsoft.ApiManagement/service/apis/policies@2023-05-01-
 }
 
 // Create the SSE endpoint operation
-resource mcpSseOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
-  parent: mcpApi
-  name: 'mcp-sse'
-  properties: {
-    displayName: 'MCP SSE Endpoint'
-    method: 'GET'
-    urlTemplate: '/sse'
-    description: 'Server-Sent Events endpoint for MCP Server'
-  }
-}
+// resource mcpSseOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
+//   parent: mcpApi
+//   name: 'mcp-sse'
+//   properties: {
+//     displayName: 'MCP SSE Endpoint'
+//     method: 'GET'
+//     urlTemplate: '/sse'
+//     description: 'Server-Sent Events endpoint for MCP Server'
+//   }
+// }
 
-// Create the message endpoint operation
-resource mcpMessageOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
-  parent: mcpApi
-  name: 'mcp-message'
-  properties: {
-    displayName: 'MCP Message Endpoint'
-    method: 'POST'
-    urlTemplate: '/message'
-    description: 'Message endpoint for MCP Server'
-  }
-}
+// // Create the message endpoint operation
+// resource mcpMessageOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
+//   parent: mcpApi
+//   name: 'mcp-message'
+//   properties: {
+//     displayName: 'MCP Message Endpoint'
+//     method: 'POST'
+//     urlTemplate: '/message'
+//     description: 'Message endpoint for MCP Server'
+//   }
+// }
 
-// Create a test endpoint for debugging
-resource mcpTestMessageOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
+// // Create a test endpoint for debugging
+// resource mcpTestMessageOperation 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
+//   parent: mcpApi
+//   name: 'mcp-test-message'
+//   properties: {
+//     displayName: 'MCP Test Message Endpoint'
+//     method: 'POST'
+//     urlTemplate: '/test-message'
+//     description: 'Test endpoint for debugging the message flow'
+//   }
+// }
+
+// streamable http mcp endpoint
+resource mcpEndpoint 'Microsoft.ApiManagement/service/apis/operations@2023-05-01-preview' = {
   parent: mcpApi
-  name: 'mcp-test-message'
+  name: 'mcp-endpoint'
   properties: {
-    displayName: 'MCP Test Message Endpoint'
+    displayName: 'MCP Endpoint'
     method: 'POST'
-    urlTemplate: '/test-message'
-    description: 'Test endpoint for debugging the message flow'
+    urlTemplate: '/mcp'
+    description: 'Endpoint for MCP Server'
   }
 }
 

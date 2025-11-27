@@ -65,58 +65,58 @@ resource cryptoScriptApimRoleAssignment 'Microsoft.Authorization/roleAssignments
 
 // Using a deployment script to generate cryptographically secure values for AES encryption
 // Key is 32 bytes (256-bit) and IV is 16 bytes (128-bit)
-resource cryptoValuesScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
-  name: 'generateCryptoValues'
-  location: location
-  kind: 'AzurePowerShell'
-  identity: {
-    type: 'UserAssigned'
-    userAssignedIdentities: {
-      '${cryptoScriptIdentity.id}': {}
-    }
-  }
-  properties: {
-    azPowerShellVersion: '7.0'
-    timeout: 'PT30M'
-    retentionInterval: 'P1D'
-    environmentVariables: [
-      {
-        name: 'APIM_NAME'
-        value: apimServiceName
-      }
-      {
-        name: 'RESOURCEGROUP_NAME'
-        value: resourceGroup().name
-      }
-      {
-        name: 'SUBSCRIPTION_ID'
-        value: subscription().subscriptionId
-      }
-    ]
-    scriptContent: '''
-      # Set subscription context
-      Set-AzContext -Subscription $env:SUBSCRIPTION_ID
+// resource cryptoValuesScript 'Microsoft.Resources/deploymentScripts@2020-10-01' = {
+//   name: 'generateCryptoValues'
+//   location: location
+//   kind: 'AzurePowerShell'
+//   identity: {
+//     type: 'UserAssigned'
+//     userAssignedIdentities: {
+//       '${cryptoScriptIdentity.id}': {}
+//     }
+//   }
+//   properties: {
+//     azPowerShellVersion: '7.0'
+//     timeout: 'PT30M'
+//     retentionInterval: 'P1D'
+//     environmentVariables: [
+//       {
+//         name: 'APIM_NAME'
+//         value: apimServiceName
+//       }
+//       {
+//         name: 'RESOURCEGROUP_NAME'
+//         value: resourceGroup().name
+//       }
+//       {
+//         name: 'SUBSCRIPTION_ID'
+//         value: subscription().subscriptionId
+//       }
+//     ]
+//     scriptContent: '''
+//       # Set subscription context
+//       Set-AzContext -Subscription $env:SUBSCRIPTION_ID
       
-      # Generate random 32 bytes (256-bit) key for AES-256
-      $key = New-Object byte[] 32
-      $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
-      $rng.GetBytes($key)
-      $keyBase64 = [Convert]::ToBase64String($key)
+//       # Generate random 32 bytes (256-bit) key for AES-256
+//       $key = New-Object byte[] 32
+//       $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+//       $rng.GetBytes($key)
+//       $keyBase64 = [Convert]::ToBase64String($key)
       
-      # Generate random 16 bytes (128-bit) IV
-      $iv = New-Object byte[] 16
-      $rng.GetBytes($iv)
-      $ivBase64 = [Convert]::ToBase64String($iv)
+//       # Generate random 16 bytes (128-bit) IV
+//       $iv = New-Object byte[] 16
+//       $rng.GetBytes($iv)
+//       $ivBase64 = [Convert]::ToBase64String($iv)
       
-      # Create APIM context with subscription ID
-      $apimContext = New-AzApiManagementContext -ResourceGroupName $env:RESOURCEGROUP_NAME -ServiceName $env:APIM_NAME
+//       # Create APIM context with subscription ID
+//       $apimContext = New-AzApiManagementContext -ResourceGroupName $env:RESOURCEGROUP_NAME -ServiceName $env:APIM_NAME
       
-      # Set the values in APIM named values
-      New-AzApiManagementNamedValue -Context $apimContext -NamedValueId "EncryptionKey" -Name "EncryptionKey" -Value $keyBase64 -Secret
-      New-AzApiManagementNamedValue -Context $apimContext -NamedValueId "EncryptionIV" -Name "EncryptionIV" -Value $ivBase64 -Secret
-    '''
-  }
-}
+//       # Set the values in APIM named values
+//       New-AzApiManagementNamedValue -Context $apimContext -NamedValueId "EncryptionKey" -Name "EncryptionKey" -Value $keyBase64 -Secret
+//       New-AzApiManagementNamedValue -Context $apimContext -NamedValueId "EncryptionIV" -Name "EncryptionIV" -Value $ivBase64 -Secret
+//     '''
+//   }
+// }
 
 // Define the Named Values
 resource EntraIDTenantIdNamedValue 'Microsoft.ApiManagement/service/namedValues@2021-08-01' = {
@@ -231,6 +231,28 @@ resource CosmosDbContainerNamedValue 'Microsoft.ApiManagement/service/namedValue
   }
 }
 
+// create a placeholder for EncryptionKey named value
+resource EncryptionKeyNamedValue 'Microsoft.ApiManagement/service/namedValues@2021-08-01' = {
+  parent: apimService
+  name: 'EncryptionKey'
+  properties: {
+    displayName: 'EncryptionKey'
+    value: '-'
+    secret: true
+  }
+}
+
+// create a placeholder for EncryptionIV named value
+resource EncryptionIVNamedValue 'Microsoft.ApiManagement/service/namedValues@2021-08-01' = {
+  parent: apimService
+  name: 'EncryptionIV'
+  properties: {
+    displayName: 'EncryptionIV'
+    value: '-'
+    secret: true
+  }
+}
+
 // Create the OAuth API
 resource oauthApi 'Microsoft.ApiManagement/service/apis@2021-08-01' = {
   parent: apimService
@@ -311,9 +333,9 @@ resource oauthCallbackPolicy 'Microsoft.ApiManagement/service/apis/operations/po
     format: 'rawxml'
     value: loadTextContent('oauth-callback.policy.xml')
   }
-  dependsOn: [
-    cryptoValuesScript
-  ]
+  // dependsOn: [
+  //   cryptoValuesScript
+  // ]
 }
 
 // Add a POST operation for the register endpoint
@@ -447,4 +469,49 @@ resource oauthConsentPostPolicy 'Microsoft.ApiManagement/service/apis/operations
     value: loadTextContent('consent.policy.xml')
   }
 }
+
+// Add a OPTIONS operation for the Protected Resource Metadata endpoint
+resource protectedResourceMetadataOptionsOperation 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+  parent: oauthApi
+  name: 'protectedResourceMetadata-options'
+  properties: {
+    displayName: 'Protected Resource Metadata Options'
+    method: 'OPTIONS'
+    urlTemplate: '/.well-known/oauth-protected-resource'
+    description: 'CORS preflight request handler for Protected Resource Metadata endpoint'
+  }
+}
+
+// Add policy for the Protected Resource Metadata options operation
+resource protectedResourceMetadataOptionsPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataOptionsOperation
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('protectedresourcemetadata-options.policy.xml')
+  }
+}
+
+// Add a GET operation for the Protected Resource Metadata endpoint
+resource protectedResourceMetadataGetOperation 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+  parent: oauthApi
+  name: 'protectedresourcemetadata-get'
+  properties: {
+    displayName: 'Protected Resource Metadata Get'
+    method: 'GET'
+    urlTemplate: '/.well-known/oauth-protected-resource'
+    description: 'Protected Resource Metadata endpoint'
+  }
+}
+
+// Add policy for the Protected Resource Metadata get operation
+resource protectedResourceMetadataGetPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataGetOperation
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('protectedresourcemetadata-get.policy.xml')
+  }
+}
+
 output apiId string = oauthApi.id
