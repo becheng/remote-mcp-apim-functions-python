@@ -471,9 +471,10 @@ resource oauthConsentPostPolicy 'Microsoft.ApiManagement/service/apis/operations
 }
 
 // Add a OPTIONS operation for the Protected Resource Metadata endpoint
-resource protectedResourceMetadataOptionsOperation 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+// Added to support the latest RFC9728 spec which allows the well-known URI path suffix between the host and the path and/or query
+resource protectedResourceMetadataOptionsOperationRoot 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
   parent: oauthApi
-  name: 'protectedResourceMetadata-options'
+  name: 'protectedResourceMetadata-options-root'
   properties: {
     displayName: 'Protected Resource Metadata Options'
     method: 'OPTIONS'
@@ -483,8 +484,8 @@ resource protectedResourceMetadataOptionsOperation 'Microsoft.ApiManagement/serv
 }
 
 // Add policy for the Protected Resource Metadata options operation
-resource protectedResourceMetadataOptionsPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
-  parent: protectedResourceMetadataOptionsOperation
+resource protectedResourceMetadataOptionsPolicyRoot 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataOptionsOperationRoot
   name: 'policy'
   properties: {
     format: 'rawxml'
@@ -493,9 +494,10 @@ resource protectedResourceMetadataOptionsPolicy 'Microsoft.ApiManagement/service
 }
 
 // Add a GET operation for the Protected Resource Metadata endpoint
-resource protectedResourceMetadataGetOperation 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+// Added to support the latest RFC9728 spec which allows the well-known URI path suffix between the host and the path and/or query
+resource protectedResourceMetadataGetOperationInRoot 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
   parent: oauthApi
-  name: 'protectedresourcemetadata-get'
+  name: 'protectedresourcemetadata-get-root'
   properties: {
     displayName: 'Protected Resource Metadata Get'
     method: 'GET'
@@ -505,13 +507,60 @@ resource protectedResourceMetadataGetOperation 'Microsoft.ApiManagement/service/
 }
 
 // Add policy for the Protected Resource Metadata get operation
-resource protectedResourceMetadataGetPolicy 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
-  parent: protectedResourceMetadataGetOperation
+resource protectedResourceMetadataGetPolicyInRoot 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataGetOperationInRoot
   name: 'policy'
   properties: {
     format: 'rawxml'
     value: loadTextContent('protectedresourcemetadata-get.policy.xml')
   }
 }
+
+// Add a OPTIONS operation for the Protected Resource Metadata endpoint
+// Added to support the latest RFC9728 spec which allows the well-known URI path suffix between the host and the path and/or query
+resource protectedResourceMetadataOptionsOperationInPath 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+  parent: oauthApi
+  name: 'protectedResourceMetadata-options-inpath'
+  properties: {
+    displayName: 'Protected Resource Metadata Options'
+    method: 'OPTIONS'
+    urlTemplate: '/.well-known/oauth-protected-resource/mcpservice/mcp'
+    description: 'CORS preflight request handler for Protected Resource Metadata endpoint'
+  }
+}
+
+// Add policy for the Protected Resource Metadata options operation
+resource protectedResourceMetadataOptionsPolicyInPath 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataOptionsOperationInPath
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('protectedresourcemetadata-options.policy.xml')
+  }
+}
+
+// Add a GET operation for the Protected Resource Metadata endpoint
+// Added to support the latest RFC9728 spec which allows the well-known URI path suffix between the host and the path and/or query
+resource protectedResourceMetadataGetOperationInPath 'Microsoft.ApiManagement/service/apis/operations@2021-08-01' = {
+  parent: oauthApi
+  name: 'protectedresourcemetadata-get-inpath'
+  properties: {
+    displayName: 'Protected Resource Metadata Get'
+    method: 'GET'
+    urlTemplate: '/.well-known/oauth-protected-resource/mcpservice/mcp'
+    description: 'Protected Resource Metadata endpoint'
+  }
+}
+
+// Add policy for the Protected Resource Metadata get operation
+resource protectedResourceMetadataGetPolicyInPath 'Microsoft.ApiManagement/service/apis/operations/policies@2021-08-01' = {
+  parent: protectedResourceMetadataGetOperationInPath
+  name: 'policy'
+  properties: {
+    format: 'rawxml'
+    value: loadTextContent('protectedresourcemetadata-get.policy.xml')
+  }
+}
+
 
 output apiId string = oauthApi.id
